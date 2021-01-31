@@ -14,7 +14,7 @@ const size_t W = 640;
 const size_t H = 480;
 
 constexpr size_t FEATURE_SIZE = 6;
-constexpr size_t SAMPLE_SIZE = 400;
+constexpr size_t SAMPLE_SIZE = 500;
 /// In this class you are supposed to implement
 /// a model for skin color, i.e. after training
 /// the model with a number of training images,
