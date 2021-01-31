@@ -53,7 +53,8 @@ void SkinModel::train(const cv::Mat3b& img, const cv::Mat1b& mask) {
 	cv::RNG rng;
 	size_t randRow = rng.operator()(img.rows),
 		randCol = rng.operator()(img.cols);
-	while (counter < SAMPLE_SIZE / 2) {
+	while (counter < SAMPLE_SIZE * .49) {//background samples should be slightly less than foreground?
+										//mysterious, F1 score peak at 47% of bg samples
 		if (mask.at<uchar>(randRow, randCol) == 255) {
 			feature.at<float>(0, 0)
 				= static_cast<float>(hsv.at<cv::Vec3b>(randRow, randCol)[0]) / 180.;
@@ -75,7 +76,7 @@ void SkinModel::train(const cv::Mat3b& img, const cv::Mat1b& mask) {
 		randRow = rng.operator()(img.rows);
 		randCol = rng.operator()(img.cols);
 	}
-	while (counter < SAMPLE_SIZE ) {
+	while (counter < SAMPLE_SIZE) {
 		if (mask.at<uchar>(randRow, randCol) == 0) {
 			feature.at<float>(0, 0)
 				= static_cast<float>(hsv.at<cv::Vec3b>(randRow, randCol)[0]) / 180.;
@@ -126,7 +127,7 @@ void SkinModel::finishTraining() {
 		true
 		);
 
-	cout << "Support Vectors: " << pimpl->svm->getSupportVectors() << endl
+	cout //<< "Support Vectors: " << pimpl->svm->getSupportVectors() << endl
 		<< "C: " << pimpl->svm->getC() << endl //312.5
 		<< "Gamma: " << pimpl->svm->getGamma() << endl//0.03375
 		<< "P: " << pimpl->svm->getP() << endl
@@ -152,7 +153,7 @@ cv::Mat1b SkinModel::classify(const cv::Mat3b& img)
 	//pimpl->svm->load("svm.trainmodel.xml");
 
 	cv::Mat1b skin = cv::Mat1b::zeros(img.rows, img.cols);
-	cv::Mat1b dst;
+	cv::Mat1b dst = cv::Mat1b::zeros(img.rows, img.cols);
 	cv::Mat hsv;
 	cv::Mat feature(1, FEATURE_SIZE, CV_32FC1);
 	cv::Mat3b src;
@@ -221,7 +222,21 @@ void SkinModel::SkinModelPimpl::preprocess(const cv::Mat3b& src, cv::Mat3b& dst)
 }
 
 void SkinModel::SkinModelPimpl::postprocess(const cv::Mat1b& src, cv::Mat1b& dst) {
+	cv::Mat1b mid = dst.clone();
+	std::vector<std::vector<cv::Point> > contours;
+	std::vector<cv::Vec4i> hierarchy;
+	cv::findContours(src, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE, cv::Point(0, 0));
+	for (size_t i = 0; i < contours.size(); i++) {
+		cv::Point2f pc;
+		float radius;
+		cv::Rect rect = boundingRect(contours[i]);
+		cv::minEnclosingCircle(contours[i], pc, radius);
+		float circleArea = CV_PI * radius * radius;
+		if (circleArea < 200000 && circleArea > 2000) {
+			cv::drawContours(mid, contours, i, cv::Scalar(255), cv::FILLED);
+			//cout << circleArea << endl;
+		}
+	}
 	auto kernel = getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5), cv::Point(-1, -1));
-	morphologyEx(src, dst, cv::MORPH_OPEN, kernel, cv::Point(-1, -1), 2, cv::BORDER_REPLICATE);
-	//dst = src.clone();
+	morphologyEx(mid, dst, cv::MORPH_OPEN, kernel, cv::Point(-1, -1), 2, cv::BORDER_REPLICATE);
 }

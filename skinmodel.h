@@ -37,10 +37,13 @@ class SkinModel
     class SkinModelPimpl {
     public:
         cv::Ptr<cv::ml::SVM> svm;
+        //cv::Ptr<cv::ml::SVMSGD> svmsgd;
+        //cv::Ptr<cv::ml::DTrees> dTrees;
         cv::Mat features;
         std::vector<int> labels;
         void preprocess(const cv::Mat3b& src, cv::Mat3b& dst);
         void postprocess(const cv::Mat1b& src, cv::Mat1b& dst);
+        //void extractFeature(const cv::Mat3b& rgb, const cv::Mat3b& ycrcb, const cv::Mat3b& hsv, size_t row, size_t col);
     };
     SkinModelPimpl *pimpl;
 public:
